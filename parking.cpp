@@ -1,20 +1,23 @@
 #include "knuros.h"
 
-extern gSign;
+extern MGSign gSign;
 
-extern double angle;
-extern double distance;
+extern double angle_;
+extern double distance_;
+extern bool happy_flag;
 
 void scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_msg)
 {
+    if(!happy_flag) return;
     for (unsigned int i=0;i< scan_msg->ranges.size();i++)
     {
-        if (scan_msg->ranges[i]<distance)
+	std::cout << distance_ << std::endl;
+        if (scan_msg->ranges[i]<distance_)
         {
-            distance=scan_msg->ranges[i];
-            angle = ((double)i*scan_msg->angle_increment)+scan_msg->angle_min;
+            distance_ =scan_msg->ranges[i];
+            angle_ = ((double)i*scan_msg->angle_increment)+scan_msg->angle_min;
         }
-        std::cout << distance <<" ------ "<< angle << std::endl;
+        //std::cout << distance_ <<" ------ "<< angle_ << std::endl;
     }
 }
 bool parking(ros::Publisher &vel_pub_)
@@ -30,9 +33,9 @@ bool parking(ros::Publisher &vel_pub_)
         if(gSign == STOP) continue;
         
         
-        if (distance >= 0.7 && distance <= 0.9)
+        if (distance_ >= 0.7 && distance_ <= 0.9)
         {
-            if (angle <= 0.0)
+            if (angle_ <= 0.0)
             {
                 vel.linear.x=0.2;
                 vel.angular.z=0.6;
@@ -40,7 +43,7 @@ bool parking(ros::Publisher &vel_pub_)
             }
             else
             {
-                if (angle>0)
+                if (angle_>0)
                 {
                     vel.linear.x=0.2;
                     vel.angular.z=-0.6;
@@ -48,7 +51,7 @@ bool parking(ros::Publisher &vel_pub_)
                 }
             }
         }
-        else if(distance <= 0.5) // 장애물 앞에서 멈추는 거리 조절
+        else if(distance_ <= 0.5) // 장애물 앞에서 멈추는 거리 조절
         {
             done = false;
             vel.linear.x=0.0;
@@ -60,7 +63,7 @@ bool parking(ros::Publisher &vel_pub_)
             vel.angular.z=0.0;
             vel_pub_.publish(vel);
         }
-        distance=10;
+        distance_ = 10;
         ros::spinOnce();
         loop_rate.sleep();
     }

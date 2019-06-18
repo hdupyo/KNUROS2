@@ -3,7 +3,7 @@
 using namespace cv;
 using namespace std;
 
-extern gSign;
+extern MGSign gSign;
 
 extern boost::mutex mtx[2];
 extern nav_msgs::Odometry g_odom;
@@ -22,6 +22,7 @@ odomMsgCallback(const nav_msgs::Odometry &msg)
     mtx[0].lock(); {
         g_odom = msg;
     } mtx[0].unlock();
+	
 }
 
 void
@@ -157,6 +158,12 @@ getInitialTransformation(void)
 bool
 doRotation(ros::Publisher &pubTeleop, tf::Transform &initialTransformation, double dRotation, double dRotationSpeed)
 {
+
+    geometry_msgs::Twist stop_cmd;
+    stop_cmd.linear.x = 0;
+    stop_cmd.linear.y = 0;
+    stop_cmd.angular.z = 0;
+
     geometry_msgs::Twist baseCmd;
     baseCmd.linear.x = 0.0;
     baseCmd.linear.y = 0.0;
@@ -175,6 +182,18 @@ doRotation(ros::Publisher &pubTeleop, tf::Transform &initialTransformation, doub
     while(ros::ok() && !bDone) {
         
         ros::spinOnce();
+
+        // check gSign
+        if(gSign == STOP)
+        {
+            pubTeleop.publish(stop_cmd);
+            continue;
+        }
+	if(gSign == PARKING_SIGN)
+	{
+	    pubTeleop.publish(stop_cmd);
+	    return true;
+	}
         
         tf::Transform currentTransformation = getCurrentTransformation();
         
@@ -203,10 +222,10 @@ doRotation(ros::Publisher &pubTeleop, tf::Transform &initialTransformation, doub
 }
 
 
-void autodriving()
+void autodriving(ros::Publisher &pub)
 {
     geometry_msgs::Twist cmd, stop_cmd;
-    cmd.linear.x = 0.3; stop_cmd.linear.x = 0;
+    cmd.linear.x = 0.1; stop_cmd.linear.x = 0;
     cmd.linear.y = 0.0; stop_cmd.linear.y = 0;
     cmd.angular.z = 0; stop_cmd.angular.z = 0;
     
@@ -232,6 +251,11 @@ void autodriving()
             pub.publish(stop_cmd);
             continue;
         }
+	if(gSign == PARKING_SIGN)
+	{
+	    pub.publish(stop_cmd);
+	    return;
+	}
         
         pub.publish(cmd);
         
@@ -246,6 +270,7 @@ void autodriving()
         mtx[1].lock(); {
             scan = g_scan;
         } mtx[1].unlock();
+	cout << scan.ranges.size() << endl;
         
         
         convertScan2XYZs(scan, laserScanXY);
@@ -255,6 +280,7 @@ void autodriving()
         
         double avg = average(laserScanXY, Point(odom.pose.pose.position.x, odom.pose.pose.position.y));
         
+
         for(int i = 0; i < laserScanXY.size(); i++) printf("(%.2lf, %.2lf) ", laserScanXY[i][0], laserScanXY[i][1]); printf("\n");
         
         if(isnan(avg)) continue;
@@ -262,7 +288,7 @@ void autodriving()
         
         
         tf::Transform initialTransformation = getInitialTransformation();
-        doRotation(pub, initialTransformation, theta, 0.75);
+        doRotation(pub, initialTransformation, theta, 0.5);
         
     }
 }

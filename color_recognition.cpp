@@ -30,7 +30,7 @@ void find_polygon(Mat image, vector<vector<Point> >& squares, vector<vector<Poin
     {
         approxPolyDP(Mat(contours[i]), approx, arcLength(Mat(contours[i]), true) * 0.02, true);
         
-        if(approx.size() == 3 && isContourConvex(Mat(approx)) && fabs(contourArea(Mat(approx))) > 1000)
+        if(approx.size() == 3 && isContourConvex(Mat(approx)) && fabs(contourArea(Mat(approx))) > 3000)
         {
             if(approx[0].x == 0 || approx[0].y == 0)
                 continue;
@@ -43,7 +43,7 @@ void find_polygon(Mat image, vector<vector<Point> >& squares, vector<vector<Poin
             
         }
         
-        if(approx.size() == 4 && isContourConvex(Mat(approx)) && fabs(contourArea(Mat(approx))) > 1000)
+        if(approx.size() == 4 && isContourConvex(Mat(approx)) && fabs(contourArea(Mat(approx))) > 3000)
         {
             if(approx[0].x == 0 || approx[0].y == 0)
                 continue;
@@ -145,29 +145,45 @@ MGColor get_color(Mat& img)
             int b = img.at<Vec3b>(i, j)[0];
             int g = img.at<Vec3b>(i, j)[1];
             int r = img.at<Vec3b>(i, j)[2];
+
+	    cout << "(R, G, B) : " << r << " " << g << " " << b << endl;
             
             // is it red?
-            if(max(g, b) <= 30 && r >= 200)
-                r += 1;
+            if(r >= g && r >= b)
+                acc_r += 1;
             // is it green?
-            else if(max(r, b) <= 30 && g >= 200)
-                g += 1;
+            else if(g >= r && g >= b)
+                acc_g += 1;
             //is it blue?
-            else if(max(r, g) <= 30 && b >= 200)
-                b += 1;
+            else if(b >= r && b >= g)
+                acc_b += 1;
             
         }
     }
-    
+
+    cout << "total rgb" << endl;
+    cout << acc_r << " " << acc_g << " " << acc_b << endl;
+
+
     // revise it! more accurate
-    if(r >= total_pixels / 2)
+    if(acc_r >= acc_b && acc_r >= acc_g)
+    {
+        cout << "RED color!" << endl;
         return RED;
-    if(g >= total_pixels / 2)
+    }
+    if(acc_g >= acc_r && acc_g >= acc_b)
+    {
+        cout << "GREEN color!" << endl;
         return GREEN;
-    if(b >= total_pixels / 2)
+    }
+    if(acc_b >= acc_r && acc_b >= acc_g)
+    {
+        cout << "BLUE color!" << endl;
         return BLUE;
+    }
     
-    return NIL;
+    cout << "NOCOLOR!" << endl;
+    return NOCOLOR;
 }
 
 
@@ -189,6 +205,7 @@ MGSign get_sign(Mat& img)
     
     if(largest_square.size() <= 0 && largest_triangle.size() <= 0)
     {
+        cout << "No square and triangle!" << endl;
         return NIL;
     }
     
@@ -199,18 +216,15 @@ MGSign get_sign(Mat& img)
         color = get_color(cropped_mat);
         if(color == BLUE)
         {
-            cout << "BLUE" << endl;
-            return NIL;
+            return STOP;
         }
         else if(color == GREEN)
         {
-            cout << "GREEN" << endl;
-            return GO;
+            return STOP;
         }
         else
         {
-            cout << "RED" << endl;
-            return STOP;
+            return NIL;
         }
     }
     
@@ -221,17 +235,14 @@ MGSign get_sign(Mat& img)
     
     if(color == BLUE)
     {
-        cout << "BLUE" << endl;
         return NIL;
     }
     else if(color == GREEN)
     {
-        cout << "GREEN" << endl;
-        return PARKING_AREA;
+        return GO;
     }
-    else
+    else if(color == RED)
     {
-        cout << "RED" << endl;
         return PARKING_SIGN;
     }
     
@@ -262,7 +273,7 @@ void draw_recognition_display(vector<vector<Point> >& squares, vector<vector<Poi
 }
 
 
-void postMessageRecievedRGB(const sensor_msg::ImageConstPtr& msg)
+void postMessageRecievedRGB(const sensor_msgs::ImageConstPtr& msg)
 {
     Mat img = cv_bridge::toCvShare(msg, "bgr8")->image;
     //  Mat img_origin = img.clone();
@@ -286,6 +297,8 @@ void postMessageRecievedRGB(const sensor_msg::ImageConstPtr& msg)
             cout << "NIL" << endl;
             break;
     }
-    
-    gSign = temp_sign;
+    if(temp_sign != NIL)
+    {
+    	gSign = temp_sign;
+    }
 }

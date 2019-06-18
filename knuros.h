@@ -33,10 +33,10 @@
 using namespace std;
 using namespace cv;
 
-enum MGColor {RED, GREEN, BLUE};
+enum MGColor {RED, GREEN, BLUE, NOCOLOR};
 enum MGSign {STOP, GO, PARKING_AREA, PARKING_SIGN, NIL};
 
-const double delta = 100;
+const double delta = 1;
 const double phi = 0.3;
 const double theta = 0.1;
 
@@ -49,7 +49,7 @@ Rect crop_img(Mat& img, vector<Point>& largest_square);
 MGColor get_color(Mat& img);
 MGSign get_sign(Mat& img);
 void draw_recognition_display(vector<vector<Point> >& squares, vector<vector<Point> >& triangles, Mat& img);
-void postMessageRecievedRGB(const sensor_msg::ImageConstPtr& msg);
+void postMessageRecievedRGB(const sensor_msgs::ImageConstPtr& msg);
 
 //autodriving
 template<typename T>
@@ -64,7 +64,7 @@ double average(vector<Vec3d> &laserScanXY, Point cur);
 tf::Transform getCurrentTransformation(void);
 tf::Transform getInitialTransformation(void);
 bool doRotation(ros::Publisher &pubTeleop, tf::Transform &initialTransformation, double dRotation, double dRotationSpeed);
-void autodriving();
+void autodriving(ros::Publisher &pub);
 
 //parking
 void scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_msg);
